@@ -870,7 +870,18 @@ export const DOM_TRANSLATIONS = {
   "Satisfied (Rate 1–5 ★)": "समाधानी (१-५ ★ रेटिंग द्या)",
   "Not Fixed Properly — Re-open Issue": "काम व्यवस्थित झाले नाही — पुन्हा तक्रार उघडा",
   "Rate Municipal Field Resolution Quality:": "महापालिकेच्या कामाच्या गुणवत्तेला रेटिंग द्या:",
-  "Stars": "तारे"
+  "Stars": "तारे",
+
+  // === Camera & Low-Memory Dual Upload Strings ===
+  "Snap a live photo or select from gallery": "समस्येचा थेट फोटो घ्या किंवा गॅलरीतून निवडा",
+  "📸 Live In-App Camera": "📸 थेट इन-ॲप कॅमेरा",
+  "📁 Choose from Gallery": "📁 गॅलरी / फाईल निवडा",
+  "Use system camera app": "सिस्टम कॅमेरा ॲप वापरा",
+  "Starting in-app camera...": "थेट कॅमेरा सुरू होत आहे...",
+  "Switch front/back camera": "कॅमेरा बदला",
+  "Close camera": "कॅमेरा बंद करा",
+  "Capture Photo": "फोटो काढा",
+  "Low-memory friendly: Works reliably on all phones without app crashes.": "कमी मेमरी असलेल्या मोबाईलवर देखील क्रॅश न होता सुरळीत चालते."
 };
 
 // Reverse Dictionary for Marathi-to-English restoration

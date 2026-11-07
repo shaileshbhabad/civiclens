@@ -29,7 +29,8 @@ import {
   Award,
   ThumbsUp,
   Zap,
-  Link2
+  Link2,
+  FolderOpen
 } from 'lucide-react';
 import api from '../../services/api';
 import LocationPickerMap from '../../components/LocationPickerMap';
@@ -43,6 +44,16 @@ const ComplaintForm = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  // In-App Live Camera state (avoids heavy OS activity switch on low-RAM phones)
+  const [isLiveCameraOpen, setIsLiveCameraOpen] = useState(false);
+  const [liveCameraLoading, setLiveCameraLoading] = useState(false);
+  const [liveCameraError, setLiveCameraError] = useState(null);
+  const [cameraFacing, setCameraFacing] = useState('environment'); // 'environment' | 'user'
 
   useDocumentTitle(
     language === 'mr' ? 'नवीन तक्रार नोंदणी' : 'File a Civic Grievance',
@@ -426,10 +437,125 @@ const ComplaintForm = () => {
     setImageFile(null);
     setImagePreview(null);
     setImageQuality(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (galleryInputRef.current) galleryInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+    stopLiveCamera();
+  };
+
+  // In-App WebRTC Camera controller (keeps Chrome in foreground, prevents Android Low Memory kills)
+  const startLiveCamera = async (facing = cameraFacing) => {
+    setIsLiveCameraOpen(true);
+    setLiveCameraLoading(true);
+    setLiveCameraError(null);
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    try {
+      if (!navigator?.mediaDevices?.getUserMedia) {
+        throw new Error('In-app live camera is not supported on this browser version.');
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
+        },
+        audio: false
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(console.warn);
+        };
+      }
+    } catch (err) {
+      console.warn('In-app camera failed:', err);
+      setLiveCameraError(
+        language === 'mr'
+          ? 'थेट कॅमेरा सुरू करता आला नाही. कृपया "गॅलरीतून निवडा" हा पर्याय वापरा.'
+          : 'Could not access in-app camera. Please use the "Choose from Gallery" option below.'
+      );
+    } finally {
+      setLiveCameraLoading(false);
     }
   };
+
+  const stopLiveCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsLiveCameraOpen(false);
+    setLiveCameraError(null);
+  };
+
+  const toggleCameraFacing = () => {
+    const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';
+    setCameraFacing(nextFacing);
+    startLiveCamera(nextFacing);
+  };
+
+  const captureLiveSnapshot = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      const vWidth = video.videoWidth || 1280;
+      const vHeight = video.videoHeight || 720;
+
+      let width = vWidth;
+      let height = vHeight;
+      const maxW = 1024;
+      const maxH = 768;
+      if (width > maxW || height > maxH) {
+        const ratio = Math.min(maxW / width, maxH / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      if (cameraFacing === 'user') {
+        ctx.translate(width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+
+      setImagePreview(dataUrl);
+      setImageFile({ name: `pimpri-evidence-${Date.now()}.jpg` });
+      analyzeImage(dataUrl);
+      stopLiveCamera();
+    } catch (err) {
+      console.error('Failed to capture snapshot from camera:', err);
+      stopLiveCamera();
+    }
+  };
+
+  // Clean up any open hardware camera streams when component unmounts
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   const getCategoryBeforeImage = (cat) => {
     if (cat === 'garbage') return '/images/resolutions/garbage_before.jpg';
@@ -751,28 +877,150 @@ const ComplaintForm = () => {
                 </div>
 
                 {!imagePreview ? (
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`min-h-32 sm:min-h-36 border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center ${
-                      isDragging
-                        ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]'
-                        : 'border-slate-300 hover:border-indigo-400 bg-slate-50/60 hover:bg-indigo-50/20'
-                    }`}
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
-                      <Camera className="w-7 h-7" />
+                  isLiveCameraOpen ? (
+                    /* IN-APP WEBRTC LIVE CAMERA VIEWFINDER (Zero memory crashes on Android) */
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-indigo-500 bg-black aspect-video sm:aspect-4/3 flex flex-col justify-between shadow-lg">
+                      {liveCameraLoading && (
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 text-white gap-2">
+                          <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+                          <span className="text-xs font-semibold">
+                            {language === 'mr' ? 'थेट कॅमेरा सुरू होत आहे...' : 'Starting in-app camera...'}
+                          </span>
+                        </div>
+                      )}
+
+                      {liveCameraError ? (
+                        <div className="p-6 text-center text-white space-y-4 my-auto">
+                          <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto" />
+                          <p className="text-xs sm:text-sm font-semibold text-slate-200">{liveCameraError}</p>
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => galleryInputRef.current?.click()}
+                              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                              {language === 'mr' ? 'गॅलरीतून निवडा' : 'Choose from Gallery'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={stopLiveCamera}
+                              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                            >
+                              {language === 'mr' ? 'बंद करा' : 'Cancel'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={`w-full h-full object-cover ${cameraFacing === 'user' ? 'scale-x-[-1]' : ''}`}
+                          />
+
+                          {/* Top controls */}
+                          <div className="absolute top-3 inset-x-3 flex items-center justify-between text-white z-10">
+                            <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-[11px] font-semibold flex items-center gap-1.5 border border-white/20">
+                              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                              <span>{language === 'mr' ? 'थेट इन-ॲप कॅमेरा' : 'Live In-App Camera'}</span>
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={toggleCameraFacing}
+                                className="p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white border border-white/20 transition cursor-pointer"
+                                title="Switch front/back camera"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={stopLiveCamera}
+                                className="p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-xs text-white border border-white/20 transition cursor-pointer"
+                                title="Close camera"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Bottom capture button */}
+                          <div className="absolute bottom-4 inset-x-0 flex items-center justify-center z-10">
+                            <button
+                              type="button"
+                              onClick={captureLiveSnapshot}
+                              className="w-16 h-16 rounded-full bg-white text-slate-900 border-4 border-indigo-500 shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition cursor-pointer"
+                              title="Capture Photo"
+                            >
+                              <Camera className="w-7 h-7 text-indigo-600" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                      Snap or upload a photo of the problem, or{' '}
-                      <span className="text-indigo-600 underline">browse files</span>
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Accepts camera snaps, JPG, PNG &bull; Real-time brightness, blur & fraud verification
-                    </p>
-                  </div>
+                  ) : (
+                    /* DUAL UPLOAD CARD (Optimized for all phones & low-memory devices) */
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`min-h-40 border-2 border-dashed rounded-2xl p-6 text-center transition-all flex flex-col items-center justify-center ${
+                        isDragging
+                          ? 'border-indigo-500 bg-indigo-50/50 scale-[1.01]'
+                          : 'border-slate-300 dark:border-slate-700 hover:border-indigo-400 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-indigo-50/20'
+                      }`}
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3">
+                        <Camera className="w-6 h-6" />
+                      </div>
+
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-1">
+                        {language === 'mr'
+                          ? 'समस्येचा थेट फोटो घ्या किंवा गॅलरीतून निवडा'
+                          : 'Snap a live photo or select from gallery'}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-sm">
+                        {language === 'mr'
+                          ? 'कमी मेमरी असलेल्या मोबाईलवर "थेट कॅमेरा" किंवा "गॅलरीतून निवडा" हा पर्याय वापरा.'
+                          : 'Low-memory friendly: Works reliably on all phones without app crashes.'}
+                      </p>
+
+                      {/* Dual Action Buttons */}
+                      <div className="flex flex-wrap items-center justify-center gap-2.5 w-full max-w-md">
+                        <button
+                          type="button"
+                          onClick={() => startLiveCamera('environment')}
+                          className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-[#0f2b5c] hover:bg-[#1e3a8a] text-white font-semibold text-xs inline-flex items-center justify-center gap-2 shadow-xs transition cursor-pointer active:scale-98"
+                        >
+                          <Camera className="w-4 h-4 text-emerald-400" />
+                          <span>{language === 'mr' ? '📸 थेट इन-ॲप कॅमेरा' : '📸 Live In-App Camera'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => galleryInputRef.current?.click()}
+                          className="flex-1 min-h-11 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600 font-semibold text-xs inline-flex items-center justify-center gap-2 shadow-xs transition cursor-pointer active:scale-98"
+                        >
+                          <FolderOpen className="w-4 h-4 text-indigo-500" />
+                          <span>{language === 'mr' ? '📁 गॅलरी / फाईल निवडा' : '📁 Choose from Gallery'}</span>
+                        </button>
+                      </div>
+
+                      {/* Optional phone native camera trigger */}
+                      <div className="mt-3 flex items-center gap-1.5 text-[11px] text-slate-400">
+                        <span>{language === 'mr' ? 'किंवा' : 'or'}</span>
+                        <button
+                          type="button"
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="text-indigo-600 dark:text-indigo-400 hover:underline font-medium cursor-pointer"
+                        >
+                          {language === 'mr' ? 'सिस्टम कॅमेरा ॲप वापरा' : 'Use system camera app'}
+                        </button>
+                      </div>
+                    </div>
+                  )
                 ) : (
                   <div className="space-y-3">
                     <div className="relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900">
@@ -873,11 +1121,28 @@ const ComplaintForm = () => {
                   </div>
                 )}
 
+                {/* Gallery / File Picker (NO capture attribute: never crashes on low-RAM phones) */}
+                <input
+                  ref={galleryInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                {/* System Native Camera (optional fallback) */}
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                {/* Legacy file input ref alias */}
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
                   className="hidden"
                   onChange={handleFileChange}
                 />
