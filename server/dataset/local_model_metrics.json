@@ -1,0 +1,45 @@
+{
+  "timestamp": "2026-11-07T18:12:53Z",
+  "model_architecture": "CivicLensVisionNet",
+  "classes": [
+    "pothole",
+    "non_pothole",
+    "garbage",
+    "non_garbage"
+  ],
+  "total_samples": 400,
+  "class_distribution": {
+    "pothole": 100,
+    "non_pothole": 100,
+    "garbage": 100,
+    "non_garbage": 100
+  },
+  "epochs": 3,
+  "best_val_accuracy_percent": 46.25,
+  "training_history": [
+    {
+      "epoch": 1,
+      "train_loss": 1.2025062084197997,
+      "train_acc": 43.75,
+      "val_loss": 1.458042860031128,
+      "val_acc": 33.75,
+      "val_defect_acc": 58.75
+    },
+    {
+      "epoch": 2,
+      "train_loss": 0.9135069847106934,
+      "train_acc": 64.375,
+      "val_loss": 1.3917353630065918,
+      "val_acc": 45.0,
+      "val_defect_acc": 70.0
+    },
+    {
+      "epoch": 3,
+      "train_loss": 0.7910749435424804,
+      "train_acc": 69.0625,
+      "val_loss": 1.496739387512207,
+      "val_acc": 46.25,
+      "val_defect_acc": 67.5
+    }
+  ]
+}
