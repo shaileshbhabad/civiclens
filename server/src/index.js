@@ -31,8 +31,8 @@ app.use(
     credentials: true
   })
 );
-app.use(express.json({ limit: '15mb' }));
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '35mb' }));
+app.use(express.urlencoded({ extended: true, limit: '35mb' }));
 
 import { groqService } from './services/groqService.js';
 

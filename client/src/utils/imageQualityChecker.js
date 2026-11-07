@@ -92,28 +92,28 @@ export const analyzeImageQuality = (imageSource) => {
           score -= 25;
         }
 
-        // Blank screen or uniform color fraud check (only flag truly solid screens)
-        if (stdDev < 6) {
-          issues.push('Image appears to be a blank or solid screen (Anti-Fraud Flag).');
-          score -= 55;
+        // Blank screen or uniform color fraud check (only flag truly solid black/white images)
+        if (stdDev < 2.5 && (avgBrightness < 5 || avgBrightness > 250)) {
+          issues.push('Image appears to be a blank or solid screen.');
+          score -= 40;
           isFraudSuspect = true;
         }
 
         // Blur check (calibrated so smooth asphalt / distance shots are not penalized)
-        if (avgGradient < 4.5 && stdDev < 15) {
-          issues.push('Image appears blurry or low detail. Hold the camera steady.');
-          score -= 15;
+        if (avgGradient < 3.0 && stdDev < 10) {
+          issues.push('Image appears slightly blurry. Camera held steady is recommended.');
+          score -= 10;
         }
 
         // Small dimensions
         if (!resolutionPassed) {
-          issues.push('Image resolution is very low.');
-          score -= 15;
+          issues.push('Image resolution is low.');
+          score -= 10;
         }
 
-        score = Math.max(10, Math.min(99, Math.round(score)));
+        score = Math.max(20, Math.min(99, Math.round(score)));
 
-        const status = isFraudSuspect ? 'rejected' : score >= 65 ? 'passed' : score >= 40 ? 'warning' : 'rejected';
+        const status = score >= 60 ? 'passed' : 'warning';
 
         resolve({
           score,
@@ -124,7 +124,7 @@ export const analyzeImageQuality = (imageSource) => {
           stdDev: Math.round(stdDev),
           sharpnessScore: Math.min(100, Math.round(avgGradient * 3.5)),
           issues,
-          passed: status !== 'rejected'
+          passed: true // Never block submission
         });
       } catch (err) {
         console.warn('Image analysis error:', err);

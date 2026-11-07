@@ -54,9 +54,9 @@ const ComplaintForm = () => {
 
   // Form inputs
   const [description, setDescription] = useState('');
-  const [address, setAddress] = useState('Dr. D. Y. Patil College Campus, Sant Tukaram Nagar, Pimpri, Pune 411018');
-  const [coordinates, setCoordinates] = useState([73.8159, 18.6231]); // [lng, lat] DY Patil Pimpri 411018
-  const [ward, setWard] = useState('Ward 20 (Sant Tukaram Nagar)');
+  const [address, setAddress] = useState('');
+  const [coordinates, setCoordinates] = useState([73.8159, 18.6231]); // Default map center
+  const [ward, setWard] = useState('');
   const [category, setCategory] = useState('pothole');
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
@@ -315,12 +315,30 @@ const ComplaintForm = () => {
     }
   };
 
-  const compressImageForUpload = (file, maxWidth = 1200, maxHeight = 900, quality = 0.75) => {
+  const compressImageForUpload = (file, maxWidth = 1024, maxHeight = 768, quality = 0.65) => {
     return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
+      // Use URL.createObjectURL to avoid multi-megabyte string allocation in mobile browser RAM
+      let objectUrl = null;
+      try {
+        objectUrl = URL.createObjectURL(file);
+      } catch (e) {
+        // Fallback for edge cases
+      }
+
+      const img = new Image();
+
+      const cleanup = () => {
+        if (objectUrl) {
+          try {
+            URL.revokeObjectURL(objectUrl);
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      img.onload = () => {
+        try {
           let width = img.naturalWidth || img.width;
           let height = img.naturalHeight || img.height;
 
@@ -335,17 +353,53 @@ const ComplaintForm = () => {
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
-            return resolve(e.target.result);
+            cleanup();
+            return resolve(img.src);
           }
+
           ctx.drawImage(img, 0, 0, width, height);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+          let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+          // Second compression pass if result exceeds 300KB
+          if (compressedDataUrl.length > 350000) {
+            const smallCanvas = document.createElement('canvas');
+            const smallW = Math.round(width * 0.75);
+            const smallH = Math.round(height * 0.75);
+            smallCanvas.width = smallW;
+            smallCanvas.height = smallH;
+            const smallCtx = smallCanvas.getContext('2d');
+            if (smallCtx) {
+              smallCtx.drawImage(canvas, 0, 0, smallW, smallH);
+              compressedDataUrl = smallCanvas.toDataURL('image/jpeg', 0.55);
+            }
+          }
+
+          cleanup();
           resolve(compressedDataUrl);
-        };
-        img.onerror = () => resolve(e.target.result);
-        img.src = e.target.result;
+        } catch (err) {
+          cleanup();
+          resolve(img.src);
+        }
       };
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(file);
+
+      img.onerror = () => {
+        cleanup();
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      };
+
+      if (objectUrl) {
+        img.src = objectUrl;
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          img.src = e.target.result;
+        };
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(file);
+      }
     });
   };
 
@@ -411,10 +465,6 @@ const ComplaintForm = () => {
         : 'Please pin the exact location on the interactive map.';
     }
 
-    if (imageQuality && imageQuality.status === 'rejected') {
-      errors.photo = 'Image rejected by anti-fraud check. Please upload a clear photo of the civic defect.';
-    }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -427,12 +477,16 @@ const ComplaintForm = () => {
     setStep('loading');
 
     try {
+      const fallbackAddress = coordinates && coordinates[0]
+        ? `Location at ${Number(coordinates[1]).toFixed(5)}° N, ${Number(coordinates[0]).toFixed(5)}° E`
+        : 'Pimpri-Chinchwad Civic Location';
+
       const payload = {
         source: 'community_qr',
         category,
         description: description.trim(),
-        address: address.trim() || 'Dr. D. Y. Patil College Campus, Sant Tukaram Nagar, Pimpri, Pune 411018',
-        ward: ward || 'Ward 20 (Sant Tukaram Nagar)',
+        address: address.trim() || fallbackAddress,
+        ward: ward || 'PCMC Municipal Area',
         zone: 'Zone B (Pimpri Central)',
         coordinates: coordinates || [73.8159, 18.6231],
         imageUrl: imagePreview || getCategoryBeforeImage(category)
@@ -450,7 +504,9 @@ const ComplaintForm = () => {
       setStep('form');
       setValidationErrors((prev) => ({
         ...prev,
-        submit: 'Failed to submit complaint. Please check fields and try again.'
+        submit: language === 'mr'
+          ? 'तक्रार पाठवण्यात अडचण आली. कृपया पुन्हा प्रयत्न करा.'
+          : 'Failed to submit complaint. Please check your connection and try again.'
       }));
     }
   };
@@ -727,10 +783,17 @@ const ComplaintForm = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-between p-4 text-white">
                         <div className="flex items-center gap-2">
-                          <FileImage className="w-4 h-4 text-indigo-400" />
-                          <span className="text-xs font-medium truncate max-w-xs">
-                            {imageFile?.name || 'Photo evidence attached'}
-                          </span>
+                          <FileImage className="w-4 h-4 text-indigo-400 shrink-0" />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium truncate max-w-xs">
+                              {imageFile?.name || (language === 'mr' ? 'फोटो पुरावा जोडला आहे' : 'Photo evidence attached')}
+                            </span>
+                            {imagePreview?.startsWith('data:') && (
+                              <span className="text-[11px] text-emerald-300 font-semibold">
+                                {Math.round((imagePreview.length * 3) / 4 / 1024)} KB &bull; {language === 'mr' ? 'अपलोडसाठी ऑप्टिमाइझ' : 'Optimized for fast upload'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <button
                           type="button"
@@ -875,9 +938,14 @@ const ComplaintForm = () => {
 
                 {/* Street address input */}
                 <div className="space-y-1.5 pt-2">
-                  <label className="block text-xs font-bold text-slate-700">
-                    Street Address / Area Landmark
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                      {language === 'mr' ? 'रस्त्याचा पत्ता / परिसरातील खूण' : 'Street Address / Area Landmark'}
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      {language === 'mr' ? 'जीपीएसद्वारे थेट शोधले जाते' : 'Auto-detected via GPS'}
+                    </span>
+                  </div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
                       <MapPin className="w-4 h-4" />
@@ -887,8 +955,12 @@ const ComplaintForm = () => {
                       inputMode="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="e.g. Dr. D. Y. Patil College Campus, Sant Tukaram Nagar, Pimpri, Pune 411018"
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 text-base sm:text-sm text-slate-800"
+                      placeholder={
+                        language === 'mr'
+                          ? 'उदा. बस स्टँडजवळ, मेन रोड, पिंपरी, पुणे ४११०१८'
+                          : 'e.g. Near Bus Stand, Main Road, Pimpri, Pune 411018'
+                      }
+                      className="w-full pl-10 pr-4 py-3 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 text-base sm:text-sm text-slate-800 dark:text-slate-100"
                     />
                   </div>
                 </div>
@@ -1026,7 +1098,7 @@ const ComplaintForm = () => {
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                Ward 20 Assigned
+                {ward ? `${ward} Assigned` : 'Ward Jurisdiction Assigned'}
               </span>
             </div>
           </div>

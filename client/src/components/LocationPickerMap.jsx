@@ -219,7 +219,7 @@ const LocationPickerMap = ({
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
-        { headers: { 'Accept-Language': 'en' }, signal: AbortSignal.timeout(5000) }
+        { headers: { 'Accept-Language': 'en' }, signal: AbortSignal.timeout(6000) }
       );
       if (!res.ok) {
         throw new Error(`Reverse geocode HTTP ${res.status}`);
@@ -227,19 +227,26 @@ const LocationPickerMap = ({
       const data = await res.json();
       const addr = data.address || {};
 
-      const street = addr.road || addr.street || addr.pedestrian || addr.suburb || '';
-      const landmark = addr.amenity || addr.building || addr.neighbourhood || '';
-      const suburb = addr.suburb || addr.quarter || 'Pimpri-Chinchwad';
-      const city = addr.city || addr.town || addr.county || 'Pune';
+      // Extract real place details without hardcoded fallbacks
+      const place = addr.amenity || addr.building || addr.shop || addr.office || addr.leisure || addr.historic || addr.tourism || '';
+      const road = addr.road || addr.street || addr.pedestrian || addr.footway || addr.path || '';
+      const locality = addr.suburb || addr.neighbourhood || addr.quarter || addr.subdivision || addr.residential || '';
+      const city = addr.city || addr.town || addr.village || addr.municipality || addr.city_district || addr.county || '';
+      const pincode = addr.postcode ? `${addr.postcode}` : '';
 
-      const parts = [street, landmark, suburb, city].filter(Boolean);
-      const formatted =
-        parts.length > 0
-          ? parts.join(', ')
-          : data.display_name?.split(',').slice(0, 3).join(',') || '';
+      const parts = [place, road, locality, city, pincode].filter(Boolean);
+      let formatted = '';
+      if (parts.length >= 2) {
+        formatted = parts.join(', ');
+      } else if (data.display_name) {
+        // Use clean portion of OpenStreetMap display name
+        formatted = data.display_name.split(',').slice(0, 4).map((s) => s.trim()).join(', ');
+      } else {
+        formatted = `Location at ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`;
+      }
 
-      // Estimate PCMC Ward based on suburb
-      let wardGuess = 'Ward 20 (Sant Tukaram Nagar, Pimpri 411018)';
+      // Contextual Ward detection
+      let wardGuess = 'Municipal Area';
       const lower = (formatted + ' ' + (data.display_name || '')).toLowerCase();
       if (lower.includes('tukaram') || lower.includes('dy patil')) wardGuess = 'Ward 20 (Sant Tukaram Nagar)';
       else if (lower.includes('ycm') || lower.includes('hospital')) wardGuess = 'Ward 20 (Sant Tukaram Nagar / YCMH)';
@@ -248,10 +255,11 @@ const LocationPickerMap = ({
       else if (lower.includes('kharalwadi')) wardGuess = 'Ward 20 (Kharalwadi)';
       else if (lower.includes('mahesh') || lower.includes('station')) wardGuess = 'Ward 21 (Pimpri Station)';
       else if (lower.includes('ha colony') || lower.includes('antibiotics')) wardGuess = 'Ward 22 (HA Colony)';
-      else if (lower.includes('pimpri')) wardGuess = 'Ward 20 (Sant Tukaram Nagar)';
+      else if (lower.includes('pimpri') || lower.includes('chinchwad')) wardGuess = 'PCMC Municipal Area';
+      else if (locality) wardGuess = `${locality} Area`;
+      else if (city) wardGuess = `${city} Region`;
 
-      const finalAddr = formatted || `Location at ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E (PCMC)`;
-      setDetectedAddress(finalAddr);
+      setDetectedAddress(formatted);
       setDetectedWard(wardGuess);
 
       if (onLocationChange) {
@@ -259,14 +267,14 @@ const LocationPickerMap = ({
           lat,
           lng,
           coordinates: [lng, lat],
-          address: finalAddr,
+          address: formatted,
           ward: wardGuess,
           accuracy: acc || accuracy || 15
         });
       }
     } catch (err) {
       console.warn('Reverse geocoding error:', err);
-      const fallbackAddr = `Near ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E (Pimpri-Chinchwad)`;
+      const fallbackAddr = `Location at ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E`;
       setDetectedAddress(fallbackAddr);
       if (onLocationChange) {
         onLocationChange({
@@ -274,7 +282,7 @@ const LocationPickerMap = ({
           lng,
           coordinates: [lng, lat],
           address: fallbackAddr,
-          ward: 'PCMC Municipal Area',
+          ward: 'Municipal Area',
           accuracy: acc || accuracy || 15
         });
       }
@@ -287,15 +295,12 @@ const LocationPickerMap = ({
   const handlePositionChange = (lat, lng, acc = null) => {
     setPosition([lat, lng]);
     setAccuracy(acc);
-    // Immediately notify parent so coordinates are never dropped
     if (onLocationChange) {
       onLocationChange({
         lat,
         lng,
         coordinates: [lng, lat],
-        address: detectedAddress || `Location at ${lat.toFixed(5)}° N, ${lng.toFixed(5)}° E (PCMC)`,
-        ward: detectedWard || 'PCMC Municipal Area',
-        accuracy: acc || 15
+        accuracy: acc || accuracy || 15
       });
     }
     reverseGeocode(lat, lng, acc);
@@ -304,7 +309,7 @@ const LocationPickerMap = ({
   // Browser high-precision geolocation with multi-strategy fallback
   const handleGetCurrentLocation = () => {
     setIsLocating(true);
-    setLocationNotice({ type: 'info', message: 'Detecting live location…' });
+    setLocationNotice({ type: 'info', message: 'Detecting live GPS location…' });
 
     let locked = false;
 
@@ -332,7 +337,7 @@ const LocationPickerMap = ({
         updateMapPosition(lat, lng, 15);
       }
 
-      handlePositionChange(lat, lng, acc);
+      reverseGeocode(lat, lng, acc);
     };
 
     // Parallel IP fallback that triggers if GPS takes > 2.5 seconds or fails

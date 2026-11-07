@@ -128,8 +128,27 @@ export const getCategoryIcon = (category) => {
 /**
  * Get user-friendly display label for categories
  */
-export const getCategoryLabel = (category) => {
+export const getCategoryLabel = (category, lang = null) => {
+  const isMr = lang === 'mr' || (typeof window !== 'undefined' && localStorage.getItem('civiclens_lang') === 'mr');
   const normalized = (category || '').toLowerCase();
+  if (isMr) {
+    switch (normalized) {
+      case 'pothole':
+        return 'रस्त्यावरील खड्डा';
+      case 'garbage':
+        return 'कचरा / घनकचरा';
+      case 'drainage':
+        return 'ड्रेनेज / सांडपाणी';
+      case 'streetlight':
+        return 'पथदिवे व विद्युत';
+      case 'water_leak':
+        return 'पाणी गळती';
+      case 'other':
+        return 'इतर नागरी समस्या';
+      default:
+        return capitalize(normalized.replace(/_/g, ' '));
+    }
+  }
   switch (normalized) {
     case 'pothole':
       return 'Pothole';
@@ -151,8 +170,31 @@ export const getCategoryLabel = (category) => {
 /**
  * Get user-friendly display label for complaint and incident statuses
  */
-export const getStatusLabel = (status) => {
+export const getStatusLabel = (status, lang = null) => {
+  const isMr = lang === 'mr' || (typeof window !== 'undefined' && localStorage.getItem('civiclens_lang') === 'mr');
   const normalized = (status || '').toLowerCase();
+  if (isMr) {
+    switch (normalized) {
+      case 'submitted':
+        return 'नोंदणी झाली';
+      case 'analysing':
+        return 'एआय विश्लेषण';
+      case 'verified':
+        return 'पडताळणी पूर्ण';
+      case 'open':
+        return 'सक्रिय';
+      case 'assigned':
+        return 'अधिकारी नियुक्त';
+      case 'in_progress':
+        return 'काम सुरू आहे';
+      case 'resolved':
+        return 'निवारण झाले';
+      case 'rejected':
+        return 'नाकारले';
+      default:
+        return capitalize(normalized.replace(/_/g, ' '));
+    }
+  }
   switch (normalized) {
     case 'submitted':
       return 'Submitted';
@@ -173,6 +215,29 @@ export const getStatusLabel = (status) => {
     default:
       return capitalize(normalized.replace(/_/g, ' '));
   }
+};
+
+/**
+ * Get user-friendly display label for incident severity
+ */
+export const getSeverityLabel = (severity, lang = null) => {
+  const isMr = lang === 'mr' || (typeof window !== 'undefined' && localStorage.getItem('civiclens_lang') === 'mr');
+  const normalized = (severity || '').toLowerCase();
+  if (isMr) {
+    switch (normalized) {
+      case 'critical':
+        return 'अतिगंभीर';
+      case 'high':
+        return 'उच्च';
+      case 'medium':
+        return 'मध्यम';
+      case 'low':
+        return 'कमी';
+      default:
+        return capitalize(normalized);
+    }
+  }
+  return capitalize(normalized);
 };
 
 /**
