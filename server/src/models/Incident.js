@@ -29,6 +29,18 @@ const incidentSchema = new mongoose.Schema(
       default: 50,
       index: -1 // Sorted high to low
     },
+    visualFeatures: {
+      type: [String],
+      default: []
+    },
+    defectDetected: {
+      type: Boolean,
+      default: true
+    },
+    matchedZone: {
+      type: String,
+      default: ''
+    },
     priorityFactors: {
       severityWeight: { type: Number, default: 25 },
       locationWeight: { type: Number, default: 20 },

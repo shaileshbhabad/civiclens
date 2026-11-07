@@ -1,0 +1,73 @@
+{
+  "timestamp": "2026-11-07T17:34:15.110Z",
+  "totalImages": 4,
+  "correctMatches": 4,
+  "accuracyPercent": 100,
+  "model": "qwen/qwen3.8-27b",
+  "results": [
+    {
+      "file": "pothole_sample_1.jpg",
+      "expected": "pothole",
+      "detected": "pothole",
+      "defectDetected": true,
+      "confidence": 0.98,
+      "visualFeatures": [
+        "Large depression in the road surface",
+        "Exposed aggregate and broken asphalt",
+        "Standing water in the pit",
+        "Uneven road edges"
+      ],
+      "priorityScore": 9.5,
+      "reasoning": "The image shows a massive, deep pothole occupying a significant portion of the road lane. The surface is completely broken with exposed stones and standing water, posing a severe risk of vehicle damage or accidents to the two-wheelers and pedestrians visible nearby.",
+      "match": true
+    },
+    {
+      "file": "clean_road_1.jpg",
+      "expected": "none",
+      "detected": "none",
+      "defectDetected": false,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "smooth asphalt road surface",
+        "intact concrete footpath",
+        "clear drainage channel",
+        "no visible debris or potholes"
+      ],
+      "priorityScore": 0.1,
+      "reasoning": "The road surface appears smooth and well-maintained with no visible potholes, cracks, or standing water. The footpath is clear of obstacles, and there is no accumulated garbage or drainage blockage visible in the frame.",
+      "match": true
+    },
+    {
+      "file": "garbage_sample_1.jpg",
+      "expected": "garbage",
+      "detected": "garbage",
+      "defectDetected": true,
+      "confidence": 0.98,
+      "visualFeatures": [
+        "Overflowing green municipal waste bin",
+        "Scattered plastic waste and packaging on the road",
+        "Black garbage bags left uncollected",
+        "Litter spread across the sidewalk and street edge"
+      ],
+      "priorityScore": 0.85,
+      "reasoning": "The image clearly shows a municipal waste bin that is completely full and overflowing, with a large amount of garbage scattered across the surrounding pavement and road. This indicates a failure in waste collection or management, creating a significant civic defect.",
+      "match": true
+    },
+    {
+      "file": "clean_street_1.jpg",
+      "expected": "none",
+      "detected": "none",
+      "defectDetected": false,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "Green municipal waste bin placed on the sidewalk",
+        "Intact concrete road surface",
+        "Pedestrians and vehicles moving normally",
+        "No visible potholes or water leaks"
+      ],
+      "priorityScore": 0.1,
+      "reasoning": "The image shows a standard street scene with a waste bin placed on the sidewalk. There are no visible civic defects such as potholes, garbage spills, drainage issues, or broken streetlights. The road surface appears intact and the area is functioning normally.",
+      "match": true
+    }
+  ]
+}

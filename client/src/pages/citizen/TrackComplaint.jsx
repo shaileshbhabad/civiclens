@@ -28,7 +28,9 @@ import {
   Camera,
   Lock,
   ShieldAlert,
-  User
+  User,
+  Eye,
+  Sliders
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -940,6 +942,73 @@ const TrackComplaint = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Visual Features Identified by Vision AI */}
+                  {complaint.ai_analysis?.visualFeatures && complaint.ai_analysis.visualFeatures.length > 0 && (
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-3.5 mb-4 shadow-2xs">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 mb-2">
+                        <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                        <span>{language === 'mr' ? 'एआय व्हिजन द्वारे शोधलेली प्रत्यक्ष लक्षणे:' : 'Physical Defect Features Identified by Vision AI:'}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {complaint.ai_analysis.visualFeatures.map((feat, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2.5 py-1 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1"
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                            <span>{feat}</span>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Non-defect warning notice if no defect detected */}
+                  {complaint.ai_analysis?.defectDetected === false && (
+                    <div className="p-3.5 mb-4 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>{language === 'mr' ? 'एआय व्हिजन तपासणी: फोटोमध्ये कोणताही सक्रिय नागरी दोष आढळला नाही. ही तक्रार मॅन्युअल पाहणीसाठी पाठवण्यात आली आहे.' : 'Vision AI Inspection: No active civic defect was visually detected in the uploaded photo. Flagged for manual field verification.'}</span>
+                    </div>
+                  )}
+
+                  {/* Transparent 5-Factor Priority Scoring Breakdown */}
+                  {complaint.ai_analysis?.priorityFactors && (
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-4 mb-4 shadow-2xs space-y-2.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <Sliders className="w-3.5 h-3.5 text-[#0f2b5c] dark:text-blue-400" />
+                          <span>{language === 'mr' ? 'पारदर्शक प्राधान्यक्रम गुण विश्लेषण' : 'Transparent Municipal Priority Breakdown'}</span>
+                        </span>
+                        <span className="font-mono font-bold text-sm text-[#0f2b5c] dark:text-blue-400">
+                          {complaint.incidentId?.priorityScore || complaint.ai_analysis?.priorityScore || 75}/100
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 text-center text-[11px]">
+                        <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-500 block text-[10px] uppercase font-bold">Severity</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono text-xs">{complaint.ai_analysis.priorityFactors.severityWeight || 25}/35</span>
+                        </div>
+                        <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-500 block text-[10px] uppercase font-bold">Locality Risk</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono text-xs">{complaint.ai_analysis.priorityFactors.locationWeight || 20}/25</span>
+                        </div>
+                        <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-500 block text-[10px] uppercase font-bold">Upvotes / Vol</span>
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono text-xs">{complaint.incidentId?.priorityFactors?.frequencyWeight || complaint.ai_analysis.priorityFactors.frequencyWeight || 12}/25</span>
+                        </div>
+                        <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-500 block text-[10px] uppercase font-bold">Traffic Route</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono text-xs">{complaint.ai_analysis.priorityFactors.impactWeight || 5}/10</span>
+                        </div>
+                        <div className="p-2 rounded bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-500 block text-[10px] uppercase font-bold">History</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono text-xs">{complaint.ai_analysis.priorityFactors.historyWeight || 3}/5</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Confidence Progress */}
                   <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700 mb-4 shadow-2xs">

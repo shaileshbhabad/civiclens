@@ -210,11 +210,21 @@ export const upvoteIncident = async (req, res) => {
     }
 
     incident.reportCount = (incident.reportCount || 1) + 1;
-    // Bump priority score realistically up to max 99
-    incident.priorityScore = Math.min(99, (incident.priorityScore || 50) + 3);
-    if (incident.priorityFactors) {
-      incident.priorityFactors.frequencyWeight = Math.min(25, (incident.priorityFactors.frequencyWeight || 15) + 2);
-    }
+    const count = incident.reportCount;
+    const freqWeight = count >= 6 ? 25 : count >= 4 ? 20 : count >= 2 ? 16 : 12;
+    const factors = incident.priorityFactors || {
+      severityWeight: 25,
+      locationWeight: 20,
+      frequencyWeight: 12,
+      impactWeight: 5,
+      historyWeight: 3
+    };
+    factors.frequencyWeight = freqWeight;
+    incident.priorityFactors = factors;
+    incident.priorityScore = Math.min(
+      99,
+      Math.max(20, (factors.severityWeight || 25) + (factors.locationWeight || 20) + freqWeight + (factors.impactWeight || 5) + (factors.historyWeight || 3))
+    );
     await incident.save();
 
     await Complaint.updateMany(

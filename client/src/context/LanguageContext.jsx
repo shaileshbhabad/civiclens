@@ -881,7 +881,15 @@ export const DOM_TRANSLATIONS = {
   "Switch front/back camera": "कॅमेरा बदला",
   "Close camera": "कॅमेरा बंद करा",
   "Capture Photo": "फोटो काढा",
-  "Low-memory friendly: Works reliably on all phones without app crashes.": "कमी मेमरी असलेल्या मोबाईलवर देखील क्रॅश न होता सुरळीत चालते."
+  "Low-memory friendly: Works reliably on all phones without app crashes.": "कमी मेमरी असलेल्या मोबाईलवर देखील क्रॅश न होता सुरळीत चालते.",
+
+  // === Real Vision AI & Transparent Priority Strings ===
+  "Physical Defect Features Identified by Vision AI:": "एआय व्हिजन द्वारे शोधलेली प्रत्यक्ष लक्षणे:",
+  "Vision AI Inspection: No active civic defect was visually detected in the uploaded photo. Flagged for manual field verification.": "एआय व्हिजन तपासणी: फोटोमध्ये कोणताही सक्रिय नागरी दोष आढळला नाही. ही तक्रार मॅन्युअल पाहणीसाठी पाठवण्यात आली आहे.",
+  "Transparent Municipal Priority Breakdown": "पारदर्शक प्राधान्यक्रम गुण विश्लेषण",
+  "Locality Risk": "परिसर धोका",
+  "Upvotes / Vol": "नागरिक मते / प्रमाण",
+  "Traffic Route": "वाहतूक रस्ता"
 };
 
 // Reverse Dictionary for Marathi-to-English restoration

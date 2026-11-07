@@ -80,6 +80,19 @@ const complaintSchema = new mongoose.Schema(
       urgency: String,
       confidence: { type: Number, default: 0.9 },
       imageValid: { type: Boolean, default: true },
+      defectDetected: { type: Boolean, default: true },
+      visualFeatures: { type: [String], default: [] },
+      visualHazardScore: { type: Number, default: 70 },
+      priorityScore: { type: Number, default: 65 },
+      priorityFactors: {
+        severityWeight: { type: Number, default: 25 },
+        locationWeight: { type: Number, default: 20 },
+        frequencyWeight: { type: Number, default: 12 },
+        impactWeight: { type: Number, default: 5 },
+        historyWeight: { type: Number, default: 3 }
+      },
+      matchedZone: { type: String, default: '' },
+      modelUsed: { type: String, default: 'qwen/qwen3.8-27b' },
       explanation: String
     },
     incidentId: {
