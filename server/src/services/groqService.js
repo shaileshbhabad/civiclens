@@ -3,11 +3,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-
-dotenv.config();
+import sharp from 'sharp';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Robustly load server/.env regardless of process working directory
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config();
 
 // PCMC Sensitive Zones for Locality Risk Weighting
 const PCMC_SENSITIVE_ZONES = [
@@ -77,6 +80,53 @@ export class GroqService {
   }
 
   /**
+   * Preprocess and optimize image payload using sharp.
+   * Resizes large images (up to 48MP) to max 1024x1024, JPEG quality 80 (~80-250KB).
+   * This guarantees sub-second transmission and prevents Groq HTTP 413 (Request Entity Too Large).
+   * @param {string} imageUrl
+   * @returns {Promise<string|null>} base64 data URL
+   */
+  async preprocessImagePayload(imageUrl) {
+    if (!imageUrl || typeof imageUrl !== 'string') return null;
+
+    try {
+      let buffer = null;
+
+      if (imageUrl.startsWith('data:image/')) {
+        const base64Data = imageUrl.split(';base64,').pop();
+        buffer = Buffer.from(base64Data, 'base64');
+      } else if (imageUrl.startsWith('/images/')) {
+        const clientPath = path.resolve(__dirname, '../../../client/public' + imageUrl);
+        if (fs.existsSync(clientPath)) {
+          buffer = fs.readFileSync(clientPath);
+        }
+      } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+        const response = await fetch(imageUrl);
+        const arrayBuf = await response.arrayBuffer();
+        buffer = Buffer.from(arrayBuf);
+      } else if (fs.existsSync(imageUrl)) {
+        buffer = fs.readFileSync(imageUrl);
+      }
+
+      if (!buffer) return null;
+
+      // Downscale to 1024x1024 max bounding box, JPEG 80%
+      const optimizedBuffer = await sharp(buffer)
+        .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+
+      return `data:image/jpeg;base64,${optimizedBuffer.toString('base64')}`;
+    } catch (err) {
+      console.warn('[GroqService] Image preprocessing fallback:', err.message);
+      if (imageUrl.startsWith('data:image/') || imageUrl.startsWith('http')) {
+        return imageUrl;
+      }
+      return null;
+    }
+  }
+
+  /**
    * Analyze civic issue description, coordinates, and real uploaded photograph
    * @param {string} description
    * @param {string} category
@@ -88,25 +138,8 @@ export class GroqService {
   async analyzeReport(description = '', category = 'pothole', address = '', imageUrl = '', coordinates = [73.8159, 18.6231]) {
     const client = this.getClient();
 
-    // 1. Resolve image payload to base64 data URL or direct link
-    let imagePayload = null;
-    if (imageUrl && typeof imageUrl === 'string') {
-      if (imageUrl.startsWith('data:image/')) {
-        imagePayload = imageUrl;
-      } else if (imageUrl.startsWith('/images/')) {
-        try {
-          const clientPath = path.resolve(__dirname, '../../../client/public' + imageUrl);
-          if (fs.existsSync(clientPath)) {
-            const buf = fs.readFileSync(clientPath);
-            imagePayload = `data:image/jpeg;base64,${buf.toString('base64')}`;
-          }
-        } catch (err) {
-          console.warn('[GroqService] Could not resolve local image asset:', err.message);
-        }
-      } else if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-        imagePayload = imageUrl;
-      }
-    }
+    // 1. High-Performance Server-Side Image Preprocessing & Compression
+    const imagePayload = await this.preprocessImagePayload(imageUrl);
 
     // 2. Multimodal Vision Inspection using qwen/qwen3.8-27b
     if (client && imagePayload) {
@@ -220,9 +253,9 @@ Respond ONLY with a valid JSON object strictly matching this schema:
     const severityWeight = isDefect ? Math.round((visualScore / 100) * 35) : 0;
 
     // Factor 2: Locality Proximity Risk (0 to 25 pts)
-    let locationWeight = 12; // baseline municipal area
+    let locationWeight = isDefect ? 12 : 0; // baseline municipal area
     let matchedZoneName = null;
-    if (coordinates && coordinates.length === 2) {
+    if (isDefect && coordinates && coordinates.length === 2) {
       for (const zone of PCMC_SENSITIVE_ZONES) {
         const dist = getDistanceMeters(coordinates, zone.coords);
         if (dist <= zone.radius) {
@@ -234,7 +267,7 @@ Respond ONLY with a valid JSON object strictly matching this schema:
     }
 
     // Factor 3: Initial Frequency Weight (0 to 25 pts) - baseline for 1st report is 12 pts
-    const frequencyWeight = 12;
+    const frequencyWeight = isDefect ? 12 : 0;
 
     // Factor 4: Traffic Impact Weight (0 to 10 pts)
     const addrLower = (address || '').toLowerCase();
@@ -244,14 +277,14 @@ Respond ONLY with a valid JSON object strictly matching this schema:
       addrLower.includes('main road') ||
       addrLower.includes('station') ||
       addrLower.includes('chowk');
-    const impactWeight = isArterialRoute ? 9 : 5;
+    const impactWeight = isDefect ? (isArterialRoute ? 9 : 5) : 0;
 
     // Factor 5: Historical Recurrence Index (0 to 5 pts)
-    const historyWeight = 3;
+    const historyWeight = isDefect ? 3 : 0;
 
     // Total Composite Priority Score (0 to 99)
     const totalPriorityScore = !isDefect
-      ? 15
+      ? 0
       : Math.min(99, Math.max(20, severityWeight + locationWeight + frequencyWeight + impactWeight + historyWeight));
 
     return {
@@ -259,10 +292,10 @@ Respond ONLY with a valid JSON object strictly matching this schema:
       category: isDefect ? parsedData.category || 'pothole' : 'none',
       severity: isDefect ? parsedData.severity || 'medium' : 'none',
       urgency: isDefect ? parsedData.urgency || 'within_24h' : 'routine',
-      department: parsedData.department || 'Roads',
+      department: parsedData.department || (isDefect ? 'Roads' : 'Municipal Inspection'),
       confidence: parsedData.confidence || 0.95,
-      visualFeatures: Array.isArray(parsedData.visualFeatures) ? parsedData.visualFeatures : ['Defect verified on site'],
-      visualHazardScore: visualScore,
+      visualFeatures: Array.isArray(parsedData.visualFeatures) ? parsedData.visualFeatures : (isDefect ? ['Defect verified on site'] : ['Surface intact', 'No visible damage']),
+      visualHazardScore: isDefect ? visualScore : 0,
       priorityScore: totalPriorityScore,
       priorityFactors: {
         severityWeight,
@@ -400,3 +433,4 @@ Respond ONLY with a JSON object strictly matching:
 }
 
 export const groqService = new GroqService();
+export default groqService;

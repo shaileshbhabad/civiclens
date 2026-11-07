@@ -63,15 +63,16 @@ export const createComplaint = async (req, res) => {
     };
 
     // Create the complaint
+    const isDefect = aiResult.defectDetected !== false && aiResult.category !== 'none';
     const resolvedCat = (aiResult.category && aiResult.category !== 'none') ? aiResult.category : category;
     const complaint = new Complaint({
       trackingId,
       description: description.trim(),
       imageUrl: imageUrl || getDefaultCategoryImage(resolvedCat),
       category: resolvedCat,
-      severity: aiResult.severity && aiResult.severity !== 'none' ? aiResult.severity : 'medium',
-      urgency: aiResult.urgency || 'within_24h',
-      status: 'submitted',
+      severity: aiResult.severity && aiResult.severity !== 'none' ? aiResult.severity : (isDefect ? 'medium' : 'none'),
+      urgency: aiResult.urgency || (isDefect ? 'within_24h' : 'routine'),
+      status: isDefect ? 'submitted' : 'rejected',
       source,
       location: {
         type: 'Point',
@@ -88,9 +89,9 @@ export const createComplaint = async (req, res) => {
         confidence: aiResult.confidence || 0.95,
         imageValid: aiResult.imageValid !== false,
         defectDetected: aiResult.defectDetected !== false,
-        visualFeatures: aiResult.visualFeatures || ['Civic defect inspection completed'],
-        visualHazardScore: aiResult.visualHazardScore || 70,
-        priorityScore: aiResult.priorityScore || 65,
+        visualFeatures: aiResult.visualFeatures || (isDefect ? ['Civic defect inspection completed'] : ['Surface intact', 'No visible damage']),
+        visualHazardScore: aiResult.visualHazardScore != null ? aiResult.visualHazardScore : (isDefect ? 70 : 0),
+        priorityScore: aiResult.priorityScore != null ? aiResult.priorityScore : (isDefect ? 65 : 0),
         priorityFactors: aiResult.priorityFactors || {
           severityWeight: 25,
           locationWeight: 20,
@@ -104,8 +105,12 @@ export const createComplaint = async (req, res) => {
       }
     });
 
-    // If matched existing incident within locality radius, merge this report into it; else create new incident
-    if (matchedIncident) {
+    if (!isDefect) {
+      complaint.status = 'rejected';
+      complaint.rejectionReason = aiResult.explanation || 'Visual AI Inspection: No active civic defect was visually detected in the uploaded photo.';
+      await complaint.save();
+    } else if (matchedIncident) {
+      // If matched existing incident within locality radius, merge this report into it; else create new incident
       complaint.incidentId = matchedIncident._id;
       complaint.isMerged = true;
       complaint.mergeReason = `Consolidated duplicate report within ${distance}m radius of active ${matchedIncident.category} incident.`;
@@ -153,7 +158,7 @@ export const createComplaint = async (req, res) => {
         urgency: aiResult.urgency || 'within_24h',
         priorityScore: aiResult.priorityScore || 65,
         visualFeatures: aiResult.visualFeatures || [],
-        defectDetected: aiResult.defectDetected !== false,
+        defectDetected: true,
         matchedZone: aiResult.matchedZone || '',
         priorityFactors: aiResult.priorityFactors || {
           severityWeight: 25,

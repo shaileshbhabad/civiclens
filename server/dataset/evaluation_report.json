@@ -1,73 +1,239 @@
 {
-  "timestamp": "2026-11-07T17:34:15.110Z",
-  "totalImages": 4,
-  "correctMatches": 4,
-  "accuracyPercent": 100,
+  "timestamp": "2026-11-07T18:04:27.611Z",
   "model": "qwen/qwen3.8-27b",
+  "preprocessing": "sharp 1024x1024 80% JPEG",
+  "totalImages": 12,
+  "defectDetectionAccuracyPercent": 100,
+  "categoryAccuracyPercent": 92,
   "results": [
     {
-      "file": "pothole_sample_1.jpg",
-      "expected": "pothole",
-      "detected": "pothole",
-      "defectDetected": true,
+      "file": "Img (1).jpg",
+      "folder": "pothole",
+      "expectedCategory": "pothole",
+      "expectedDefect": true,
+      "detectedCategory": "garbage",
+      "detectedDefect": true,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "large pile of mixed waste",
+        "plastic bags and debris",
+        "dry vegetation and branches",
+        "standing water/mud near the pile"
+      ],
+      "visualHazardScore": 0.8,
+      "reasoning": "The image clearly shows a significant accumulation of uncollected garbage, including plastic waste and dry vegetation, piled up along the roadside. This constitutes a civic defect requiring cleanup.",
+      "defectMatch": true,
+      "categoryMatch": false
+    },
+    {
+      "file": "Img (397).jpg",
+      "folder": "pothole",
+      "expectedCategory": "pothole",
+      "expectedDefect": true,
+      "detectedCategory": "pothole",
+      "detectedDefect": true,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "Deep surface cavities",
+        "Standing water accumulation",
+        "Exposed aggregate and broken asphalt",
+        "Irregular road surface texture"
+      ],
+      "visualHazardScore": 8.5,
+      "reasoning": "The image displays severe road surface degradation characterized by large, deep depressions filled with standing water. The presence of exposed aggregate and broken asphalt indicates structural failure of the road surface, creating a significant hazard for vehicle tires and potential for hydroplaning.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "Img (699).jpg",
+      "folder": "pothole",
+      "expectedCategory": "pothole",
+      "expectedDefect": true,
+      "detectedCategory": "pothole",
+      "detectedDefect": true,
       "confidence": 0.98,
       "visualFeatures": [
-        "Large depression in the road surface",
-        "Exposed aggregate and broken asphalt",
-        "Standing water in the pit",
-        "Uneven road edges"
+        "Deep cavity in asphalt",
+        "Standing water accumulation",
+        "Cracked and crumbling road edges",
+        "Reflection of building in water"
       ],
-      "priorityScore": 9.5,
-      "reasoning": "The image shows a massive, deep pothole occupying a significant portion of the road lane. The surface is completely broken with exposed stones and standing water, posing a severe risk of vehicle damage or accidents to the two-wheelers and pedestrians visible nearby.",
-      "match": true
+      "visualHazardScore": 8.5,
+      "reasoning": "The image clearly shows a significant pothole with a deep cavity filled with standing water. The edges of the road surface are heavily cracked and crumbling, indicating structural failure of the asphalt. The depth and water accumulation pose a high risk of vehicle damage and potential accidents.",
+      "defectMatch": true,
+      "categoryMatch": true
     },
     {
       "file": "clean_road_1.jpg",
-      "expected": "none",
-      "detected": "none",
-      "defectDetected": false,
+      "folder": "non_pothole",
+      "expectedCategory": "none",
+      "expectedDefect": false,
+      "detectedCategory": "none",
+      "detectedDefect": false,
       "confidence": 0.95,
       "visualFeatures": [
         "smooth asphalt road surface",
-        "intact concrete footpath",
-        "clear drainage channel",
+        "clear pedestrian walkway",
+        "active traffic flow",
         "no visible debris or potholes"
       ],
-      "priorityScore": 0.1,
-      "reasoning": "The road surface appears smooth and well-maintained with no visible potholes, cracks, or standing water. The footpath is clear of obstacles, and there is no accumulated garbage or drainage blockage visible in the frame.",
-      "match": true
+      "visualHazardScore": 0.1,
+      "reasoning": "The road surface appears smooth and well-maintained with no visible potholes, cavities, or significant debris. The pedestrian walkway is clear, and there are no signs of open drainage or garbage accumulation in the immediate view.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "img (1587).jpg",
+      "folder": "non_pothole",
+      "expectedCategory": "none",
+      "expectedDefect": false,
+      "detectedCategory": "none",
+      "detectedDefect": false,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "severe motion blur",
+        "low light conditions",
+        "light streaks",
+        "unrecognizable scene"
+      ],
+      "visualHazardScore": 0,
+      "reasoning": "The image is extremely blurry and dark, likely due to camera shake or motion during a long exposure at night. No specific civic infrastructure or defects (such as potholes, garbage, or drainage issues) are visible or identifiable.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "img (409).jpg",
+      "folder": "non_pothole",
+      "expectedCategory": "none",
+      "expectedDefect": false,
+      "detectedCategory": "none",
+      "detectedDefect": false,
+      "confidence": 0.98,
+      "visualFeatures": [
+        "smooth asphalt surface",
+        "clear lane markings",
+        "intact guardrails",
+        "no visible debris or potholes"
+      ],
+      "visualHazardScore": 0.1,
+      "reasoning": "The road surface appears smooth and well-maintained with no visible potholes, cavities, or debris. The lane markings are clear, and the surrounding infrastructure (guardrails, streetlights) appears intact.",
+      "defectMatch": true,
+      "categoryMatch": true
     },
     {
       "file": "garbage_sample_1.jpg",
-      "expected": "garbage",
-      "detected": "garbage",
-      "defectDetected": true,
+      "folder": "garbage",
+      "expectedCategory": "garbage",
+      "expectedDefect": true,
+      "detectedCategory": "garbage",
+      "detectedDefect": true,
       "confidence": 0.98,
       "visualFeatures": [
         "Overflowing green municipal waste bin",
-        "Scattered plastic waste and packaging on the road",
-        "Black garbage bags left uncollected",
-        "Litter spread across the sidewalk and street edge"
+        "Scattered plastic waste and litter on the road surface",
+        "Accumulation of garbage bags around the bin base"
       ],
-      "priorityScore": 0.85,
-      "reasoning": "The image clearly shows a municipal waste bin that is completely full and overflowing, with a large amount of garbage scattered across the surrounding pavement and road. This indicates a failure in waste collection or management, creating a significant civic defect.",
-      "match": true
+      "visualHazardScore": 0.85,
+      "reasoning": "The image clearly shows a municipal waste bin that is completely full and overflowing, with a significant amount of loose garbage, plastic, and waste bags scattered across the adjacent road and sidewalk. This indicates a failure in waste collection or management.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "IMG (310).jpg",
+      "folder": "garbage",
+      "expectedCategory": "garbage",
+      "expectedDefect": true,
+      "detectedCategory": "garbage",
+      "detectedDefect": true,
+      "confidence": 0.98,
+      "visualFeatures": [
+        "Large pile of uncollected solid waste",
+        "Plastic bags and loose litter",
+        "Stray dogs scavenging in the waste",
+        "Accumulation on paved sidewalk"
+      ],
+      "visualHazardScore": 0.85,
+      "reasoning": "The image clearly shows a significant accumulation of uncollected garbage and plastic waste on the sidewalk, with stray dogs actively scavenging, indicating a sanitation and public health issue.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "IMG (526).jpg",
+      "folder": "garbage",
+      "expectedCategory": "garbage",
+      "expectedDefect": true,
+      "detectedCategory": "garbage",
+      "detectedDefect": true,
+      "confidence": 0.98,
+      "visualFeatures": [
+        "Large-scale accumulation of solid waste",
+        "Discarded plastic bags and sacks",
+        "Broken concrete pipes and debris",
+        "Muddy ground with potential leachate"
+      ],
+      "visualHazardScore": 9.5,
+      "reasoning": "The image displays a massive, uncollected pile of solid waste, including plastic bags, construction debris, and broken pipes, covering a significant area. This represents a severe civic defect requiring immediate cleanup.",
+      "defectMatch": true,
+      "categoryMatch": true
     },
     {
       "file": "clean_street_1.jpg",
-      "expected": "none",
-      "detected": "none",
-      "defectDetected": false,
+      "folder": "non_garbage",
+      "expectedCategory": "none",
+      "expectedDefect": false,
+      "detectedCategory": "none",
+      "detectedDefect": false,
       "confidence": 0.95,
       "visualFeatures": [
-        "Green municipal waste bin placed on the sidewalk",
-        "Intact concrete road surface",
-        "Pedestrians and vehicles moving normally",
-        "No visible potholes or water leaks"
+        "green municipal waste bin",
+        "concrete road surface",
+        "pedestrian crossing",
+        "residential building facade"
       ],
-      "priorityScore": 0.1,
-      "reasoning": "The image shows a standard street scene with a waste bin placed on the sidewalk. There are no visible civic defects such as potholes, garbage spills, drainage issues, or broken streetlights. The road surface appears intact and the area is functioning normally.",
-      "match": true
+      "visualHazardScore": 0.1,
+      "reasoning": "The image shows a standard street scene with a green waste bin placed on the sidewalk. The road surface appears intact with no visible potholes, cavities, or open drainage. There is no uncollected garbage scattered on the ground, and the waste bin is not overflowing. The scene appears to be in a normal state of maintenance.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "Img (288).jpeg",
+      "folder": "non_garbage",
+      "expectedCategory": "none",
+      "expectedDefect": false,
+      "detectedCategory": "none",
+      "detectedDefect": false,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "green municipal waste container",
+        "graffiti on container surface",
+        "parked vehicles",
+        "paved road surface",
+        "sidewalk with paving stones"
+      ],
+      "visualHazardScore": 0.1,
+      "reasoning": "The image shows a standard municipal waste container (dustbin) parked on the side of the road. While the container has graffiti and some wear, it is a piece of infrastructure, not a defect like a pothole, cavity, or uncollected loose garbage. The road surface appears intact.",
+      "defectMatch": true,
+      "categoryMatch": true
+    },
+    {
+      "file": "Img (477).jpeg",
+      "folder": "non_garbage",
+      "expectedCategory": "none",
+      "expectedDefect": false,
+      "detectedCategory": "none",
+      "detectedDefect": false,
+      "confidence": 0.95,
+      "visualFeatures": [
+        "green metal utility container",
+        "graffiti on container surface",
+        "paved road surface",
+        "grass verge",
+        "street lighting"
+      ],
+      "visualHazardScore": 0.1,
+      "reasoning": "The image shows a utility container (likely for electrical or telecom equipment) situated on a grass verge next to a road. While the container has graffiti on it, there are no visible civic defects such as potholes, road cavities, uncollected garbage, or open drainage in the immediate vicinity.",
+      "defectMatch": true,
+      "categoryMatch": true
     }
   ]
 }

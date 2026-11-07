@@ -42,6 +42,10 @@ const complaintSchema = new mongoose.Schema(
       default: 'submitted',
       index: true
     },
+    rejectionReason: {
+      type: String,
+      default: ''
+    },
     source: {
       type: String,
       default: 'community_qr'

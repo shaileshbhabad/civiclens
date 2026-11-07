@@ -39,3 +39,12 @@ Thumbs.db
 # Temp scratch & caches
 .cache
 .vite
+
+# Dataset raw media binaries (prevent repo bloat while preserving benchmark scripts & json)
+server/dataset/**/*.jpg
+server/dataset/**/*.jpeg
+server/dataset/**/*.png
+server/dataset/**/*.mp4
+server/dataset/**/*.webp
+server/dataset/**/*.bmp
+server/dataset/**/*.gif
