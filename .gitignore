@@ -48,3 +48,5 @@ server/dataset/**/*.mp4
 server/dataset/**/*.webp
 server/dataset/**/*.bmp
 server/dataset/**/*.gif
+server/dataset_colab/
+*.zip
