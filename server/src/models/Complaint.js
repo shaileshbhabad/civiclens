@@ -97,7 +97,8 @@ const complaintSchema = new mongoose.Schema(
       },
       matchedZone: { type: String, default: '' },
       modelUsed: { type: String, default: 'qwen/qwen3.8-27b' },
-      explanation: String
+      explanation: String,
+      localModel: { type: Object, default: null }
     },
     incidentId: {
       type: mongoose.Schema.Types.ObjectId,

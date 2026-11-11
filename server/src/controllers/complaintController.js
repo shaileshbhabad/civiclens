@@ -101,7 +101,8 @@ export const createComplaint = async (req, res) => {
         },
         matchedZone: aiResult.matchedZone || '',
         modelUsed: aiResult.modelUsed || 'qwen/qwen3.8-27b',
-        explanation: aiResult.explanation || 'Verified issue via GPS coordinates.'
+        explanation: aiResult.explanation || 'Verified issue via GPS coordinates.',
+        localModel: aiResult.localModel || null
       }
     });
 

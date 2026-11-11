@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import sharp from 'sharp';
+import { localVisionService } from './localVisionService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -141,7 +142,20 @@ export class GroqService {
     // 1. High-Performance Server-Side Image Preprocessing & Compression
     const imagePayload = await this.preprocessImagePayload(imageUrl);
 
-    // 2. Multimodal Vision Inspection using qwen/qwen3.8-27b
+    // 2. Local Trained MobileNetV3 Prediction (Trained on PCMC dataset)
+    let localPred = null;
+    if (imagePayload) {
+      try {
+        localPred = await localVisionService.predict(imagePayload);
+        if (localPred && !localPred.error) {
+          console.log(`[CivicLens Model] Verified by user-trained MobileNetV3: ${localPred.predictedClass} (${Math.round(localPred.confidence * 100)}% conf, Defect: ${localPred.defectDetected})`);
+        }
+      } catch (err) {
+        console.warn('[GroqService] Local model inference fallback:', err.message);
+      }
+    }
+
+    // 3. Multimodal Vision Inspection using qwen/qwen3.8-27b
     if (client && imagePayload) {
       try {
         const prompt = `You are the Lead Municipal AI Vision & Infrastructure Inspector for Pimpri-Chinchwad Municipal Corporation (PCMC), Pune.
@@ -188,11 +202,44 @@ Respond ONLY with a JSON object strictly matching this schema:
         const content = chatCompletion.choices[0]?.message?.content;
         if (content) {
           const parsed = JSON.parse(content);
-          return this.computePriorityAndFactors(parsed, address, coordinates, 'qwen/qwen3.8-27b');
+          const computed = this.computePriorityAndFactors(parsed, address, coordinates, 'qwen/qwen3.8-27b');
+          if (localPred && !localPred.error) {
+            computed.localModel = localPred;
+          }
+          return computed;
         }
       } catch (err) {
-        console.warn('[GroqService] Vision API call failed, falling back to text LLM / heuristic:', err.message);
+        console.warn('[GroqService] Vision API call failed, falling back to local trained model / heuristic:', err.message);
       }
+    }
+
+    // 4. Primary Local Model Fallback (User-Trained MobileNetV3) if Vision API fails or offline
+    if (localPred && !localPred.error) {
+      console.log('[GroqService] Using user-trained MobileNetV3 model as primary verification engine');
+      const isDefect = localPred.defectDetected;
+      const detectedCat = localPred.category || 'other';
+      const severity = isDefect ? (localPred.confidence > 0.85 ? 'high' : 'medium') : 'none';
+      const visualFeatures = isDefect
+        ? [`${detectedCat} defect verified by trained PCMC model`, `Physical anomaly confirmed (${Math.round(localPred.confidence * 100)}% confidence)`]
+        : ['Surface appears clear', 'No active civic defect verified in photograph'];
+
+      const parsed = {
+        defectDetected: isDefect,
+        category: isDefect ? detectedCat : 'none',
+        severity,
+        urgency: isDefect ? 'within_24h' : 'routine',
+        department: detectedCat === 'garbage' ? 'Sanitation' : detectedCat === 'pothole' ? 'Roads' : 'Public Works',
+        confidence: localPred.confidence,
+        visualFeatures,
+        visualHazardScore: isDefect ? Math.round(localPred.confidence * 85) : 0,
+        explanation: isDefect
+          ? `CivicLens trained MobileNetV3 model verified ${detectedCat} defect with ${Math.round(localPred.confidence * 100)}% confidence.`
+          : `CivicLens trained MobileNetV3 model inspected photograph and found no active civic defect (classified as clean surface with ${Math.round(localPred.confidence * 100)}% confidence).`
+      };
+
+      const computed = this.computePriorityAndFactors(parsed, address, coordinates, 'local_mobilenet_v3');
+      computed.localModel = localPred;
+      return computed;
     }
 
     // 3. Text LLM analysis if image payload failed or is missing

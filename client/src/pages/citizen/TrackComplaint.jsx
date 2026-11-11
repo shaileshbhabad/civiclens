@@ -30,7 +30,8 @@ import {
   ShieldAlert,
   User,
   Eye,
-  Sliders
+  Sliders,
+  Cpu
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -903,9 +904,17 @@ const TrackComplaint = () => {
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
                       CivicLens AI Diagnostics & Triage
                     </h3>
-                    <span className="ml-auto text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                      Automated Verification
-                    </span>
+                    <div className="ml-auto flex items-center gap-2">
+                      {complaint.ai_analysis?.localModel && (
+                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
+                          <Cpu className="w-3 h-3" />
+                          <span>MobileNetV3 ({Math.round((complaint.ai_analysis.localModel.confidence || 0.9) * 100)}%)</span>
+                        </span>
+                      )}
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                        Automated Verification
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
